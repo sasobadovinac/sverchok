@@ -65,6 +65,7 @@ def ensure_valid_show_string(nodetype):
     except Exception as err:
         print(f"nodetype | {nodetype}|")
         print(err)
+        return nodetype.bl_label + " | ERROR?!"
 
     return nodetype.bl_label + ensure_short_description(description)
 
