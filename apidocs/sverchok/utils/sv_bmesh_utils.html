@@ -57,7 +57,7 @@ from bmesh.types import BMVert, BMEdge, BMFace
 import mathutils
 
 from sverchok.data_structure import zip_long_repeat, has_element
-from sverchok.utils.logging import debug
+from sverchok.utils.sv_logging import sv_logger
 
 @contextmanager
 def empty_bmesh(use_operators=True):
@@ -82,9 +82,9 @@ def empty_bmesh(use_operators=True):
 
 class EmptyBmesh:
     &#34;&#34;&#34;It&#39;s a bit faster than empty_bmesh because there is need to generate
-    new manger class each call&#34;&#34;&#34;
+    new manager class each call&#34;&#34;&#34;
     def __init__(self, use_operators=True):
-        &#34;&#34;&#34;:supress: if True any errors during node execution will be suppressed&#34;&#34;&#34;
+        &#34;&#34;&#34;:suppress: if True any errors during node execution will be suppressed&#34;&#34;&#34;
         self._use_operators = use_operators
         self._bm = bmesh.new(use_operators=use_operators)
 
@@ -181,8 +181,19 @@ def add_mesh_to_bmesh(bm, verts, edges=None, faces=None, sv_index_name=None, upd
     new_edge = bm.edges.new
     new_face = bm.faces.new
     bm_verts = [new_vert(co) for co in verts]
-    [new_edge((bm_verts[i1], bm_verts[i2])) for i1, i2 in edges or []]
-    [new_face([bm_verts[i] for i in face]) for face in faces or []]
+
+    #[new_edge((bm_verts[i1], bm_verts[i2])) for i1, i2 in edges or []] # не надо так делать
+    if edges is not None:
+        for i1, i2 in edges:
+            new_edge((bm_verts[i1], bm_verts[i2]))
+    else:
+        new_edges = []
+    #[new_face([bm_verts[i] for i in face]) for face in faces or []] # не надо так делать
+    if faces is not None:
+        for face in faces:
+            new_face([bm_verts[i] for i in face])
+    else:
+        new_face = []
 
     if update_normals:
         bm.normal_update()
@@ -282,7 +293,7 @@ def face_data_from_bmesh_faces(bm, face_data):
     for face in bm.faces:
         idx = face[initial_index]
         if idx &lt; 0 or idx &gt;= n_face_data:
-            debug(&#34;Unexisting face_data[%s] [0 - %s]&#34;, idx, n_face_data)
+            sv_logger.debug(&#34;Unexisting face_data[%s] [0 - %s]&#34;, idx, n_face_data)
             face_data_out.append(None)
         else:
             face_data_out.append(face_data[idx])
@@ -297,7 +308,7 @@ def edge_data_from_bmesh_edges(bm, edge_data):
     for edge in bm.edges:
         idx = edge[initial_index]
         if idx &lt; 0 or idx &gt;= n_edge_data:
-            debug(&#34;Unexisting edge_data[%s] [0 - %s]&#34;, idx, n_edge_data)
+            sv_logger.debug(&#34;Unexisting edge_data[%s] [0 - %s]&#34;, idx, n_edge_data)
             edge_data_out.append(None)
         else:
             edge_data_out.append(edge_data[idx])
@@ -312,7 +323,7 @@ def vert_data_from_bmesh_verts(bm, vert_data):
     for vert in bm.verts:
         idx = vert[initial_index]
         if idx &lt; 0 or idx &gt;= n_vert_data:
-            debug(&#34;Unexisting vert_data[%s] [0 - %s]&#34;, idx, n_vert_data)
+            sv_logger.debug(&#34;Unexisting vert_data[%s] [0 - %s]&#34;, idx, n_vert_data)
             vert_data_out.append(None)
         else:
             vert_data_out.append(vert_data[idx])
@@ -327,7 +338,7 @@ def bmesh_edges_from_edge_mask(bm, edge_mask):
     for bm_edge in bm.edges:
         idx = bm_edge[initial_index]
         if idx &lt; 0 or idx &gt;= n_edge_mask:
-            debug(&#34;Unexisting edge_mask[%s] [0 - %s]&#34;, idx, n_edge_mask)
+            sv_logger.debug(&#34;Unexisting edge_mask[%s] [0 - %s]&#34;, idx, n_edge_mask)
         else:
             mask = edge_mask[idx]
             if mask:
@@ -790,7 +801,7 @@ def wave_markup_faces(bm, init_face_mask, neighbour_by_vert = True, find_shortes
                             other_face[path_distance] = new_distance
                             other_face[path_prev_index] = face.index
                             other_face[init_index] = face[init_index]
-        #debug(&#34;Front #%s: %s&#34;, step, len(new_wave_front))
+        # sv_logger.debug(&#34;Front #%s: %s&#34;, step, len(new_wave_front))
         done.update(wave_front)
         wave_front = new_wave_front
 
@@ -863,7 +874,7 @@ def wave_markup_verts(bm, init_vert_mask, neighbour_by_edge = True, find_shortes
                             other_vert[path_distance] = new_distance
                             other_vert[path_prev_index] = vert.index
                             other_vert[init_index] = vert[init_index]
-        #debug(&#34;Front #%s: %s&#34;, step, len(new_wave_front))
+        # sv_logger.debug(&#34;Front #%s: %s&#34;, step, len(new_wave_front))
         done.update(wave_front)
         wave_front = new_wave_front
 
@@ -947,8 +958,19 @@ def recalc_normals(verts, edges, faces, loop=False):
     new_edge = bm.edges.new
     new_face = bm.faces.new
     bm_verts = [new_vert(co) for co in verts]
-    [new_edge((bm_verts[i1], bm_verts[i2])) for i1, i2 in edges or []]
-    [new_face([bm_verts[i] for i in face]) for face in faces or []]
+
+    #[new_edge((bm_verts[i1], bm_verts[i2])) for i1, i2 in edges or []] # не надо так делать
+    if edges is not None:
+        for i1, i2 in edges:
+            new_edge((bm_verts[i1], bm_verts[i2]))
+    else:
+        new_edges = []
+    #[new_face([bm_verts[i] for i in face]) for face in faces or []] # не надо так делать
+    if faces is not None:
+        for face in faces:
+            new_face([bm_verts[i] for i in face])
+    else:
+        new_face = []
 
     if update_normals:
         bm.normal_update()
@@ -1038,7 +1060,7 @@ def recalc_normals(verts, edges, faces, loop=False):
     for bm_edge in bm.edges:
         idx = bm_edge[initial_index]
         if idx &lt; 0 or idx &gt;= n_edge_mask:
-            debug(&#34;Unexisting edge_mask[%s] [0 - %s]&#34;, idx, n_edge_mask)
+            sv_logger.debug(&#34;Unexisting edge_mask[%s] [0 - %s]&#34;, idx, n_edge_mask)
         else:
             mask = edge_mask[idx]
             if mask:
@@ -1328,7 +1350,7 @@ iterate over any edges or do index lookups</p></div>
     for edge in bm.edges:
         idx = edge[initial_index]
         if idx &lt; 0 or idx &gt;= n_edge_data:
-            debug(&#34;Unexisting edge_data[%s] [0 - %s]&#34;, idx, n_edge_data)
+            sv_logger.debug(&#34;Unexisting edge_data[%s] [0 - %s]&#34;, idx, n_edge_data)
             edge_data_out.append(None)
         else:
             edge_data_out.append(edge_data[idx])
@@ -1387,7 +1409,7 @@ def empty_bmesh(use_operators=True):
     for face in bm.faces:
         idx = face[initial_index]
         if idx &lt; 0 or idx &gt;= n_face_data:
-            debug(&#34;Unexisting face_data[%s] [0 - %s]&#34;, idx, n_face_data)
+            sv_logger.debug(&#34;Unexisting face_data[%s] [0 - %s]&#34;, idx, n_face_data)
             face_data_out.append(None)
         else:
             face_data_out.append(face_data[idx])
@@ -1811,7 +1833,7 @@ if face_data, vert_data or edge_data was specified, this outputs 4-tuple:
     for vert in bm.verts:
         idx = vert[initial_index]
         if idx &lt; 0 or idx &gt;= n_vert_data:
-            debug(&#34;Unexisting vert_data[%s] [0 - %s]&#34;, idx, n_vert_data)
+            sv_logger.debug(&#34;Unexisting vert_data[%s] [0 - %s]&#34;, idx, n_vert_data)
             vert_data_out.append(None)
         else:
             vert_data_out.append(vert_data[idx])
@@ -1945,7 +1967,7 @@ that this face is an obstacle (wave can not pass through it).</li>
                             other_face[path_distance] = new_distance
                             other_face[path_prev_index] = face.index
                             other_face[init_index] = face[init_index]
-        #debug(&#34;Front #%s: %s&#34;, step, len(new_wave_front))
+        # sv_logger.debug(&#34;Front #%s: %s&#34;, step, len(new_wave_front))
         done.update(wave_front)
         wave_front = new_wave_front
 
@@ -2028,7 +2050,7 @@ initial vertices get index of 1, their neighbours get index of 2, and so on.</p>
                             other_vert[path_distance] = new_distance
                             other_vert[path_prev_index] = vert.index
                             other_vert[init_index] = vert[init_index]
-        #debug(&#34;Front #%s: %s&#34;, step, len(new_wave_front))
+        # sv_logger.debug(&#34;Front #%s: %s&#34;, step, len(new_wave_front))
         done.update(wave_front)
         wave_front = new_wave_front
 
@@ -2123,17 +2145,17 @@ return pydata_from_bmesh(bm), other_results</p></div>
 </code></dt>
 <dd>
 <div class="desc"><p>It's a bit faster than empty_bmesh because there is need to generate
-new manger class each call</p>
-<p>:supress: if True any errors during node execution will be suppressed</p></div>
+new manager class each call</p>
+<p>:suppress: if True any errors during node execution will be suppressed</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class EmptyBmesh:
     &#34;&#34;&#34;It&#39;s a bit faster than empty_bmesh because there is need to generate
-    new manger class each call&#34;&#34;&#34;
+    new manager class each call&#34;&#34;&#34;
     def __init__(self, use_operators=True):
-        &#34;&#34;&#34;:supress: if True any errors during node execution will be suppressed&#34;&#34;&#34;
+        &#34;&#34;&#34;:suppress: if True any errors during node execution will be suppressed&#34;&#34;&#34;
         self._use_operators = use_operators
         self._bm = bmesh.new(use_operators=use_operators)
 
